@@ -1,23 +1,42 @@
 import { PayloadAction } from "@reduxjs/toolkit";
-import { fork, take } from "redux-saga/effects";
+import { push } from "connected-react-router";
+import { fork, take, call, delay, put } from "redux-saga/effects";
 
-import { login, LoginPayload, logout } from "./authSlice";
+import {
+  login,
+  LoginPayload,
+  logout,
+  loginSuccess,
+  loginFailed,
+} from "./authSlice";
 
 function* handleLogin(payload: LoginPayload) {
-  console.log("handle login", payload);
+  try {
+    yield delay(1000);
+    localStorage.setItem("access_token", "fake_token");
+    yield put(loginSuccess({ id: 1, name: "dat nguyen" }));
+  } catch (error: any) {
+    yield put(loginFailed(error.message));
+  }
+  // redirect to dashboard admin page
+  yield put(push("/admin"));
 }
 
 function* handleLogout() {
-  console.log("handle logout");
+  localStorage.removeItem("access_token");
+  // redirect to login page
+  yield put(push("/login"));
 }
 
 function* watchLoginFlow() {
   while (true) {
-    const action: PayloadAction<LoginPayload> = yield take(login.type);
-    yield fork(handleLogin, action.payload);
-
+    const isLoggedIn = Boolean(localStorage.getItem("access_token"));
+    if (!isLoggedIn) {
+      const action: PayloadAction<LoginPayload> = yield take(login.type);
+      yield fork(handleLogin, action.payload);
+    }
     yield take(logout);
-    yield fork(handleLogout);
+    yield call(handleLogout);
   }
 }
 
